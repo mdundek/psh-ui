@@ -1,0 +1,8 @@
+{
+    "settings": {
+        "nginxConfigPath": "Nginx configuration file path",
+        "nginxHtpasswdDir": "Nginx Basic Auth config directory path",
+        "composeConfigPath": "Docker-compose configuration file path",
+        "defaultNginxDomain": "Default root domain name"
+    }
+}

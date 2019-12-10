@@ -1,0 +1,9 @@
+body {
+  /* background-color: #282c34; */
+  background-image: url(/background.png);
+  
+  background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+  background-attachment: fixed;
+}
