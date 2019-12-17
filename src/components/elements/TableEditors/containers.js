@@ -8,14 +8,13 @@ import {
     Button,
     TextField,
     Select,
+    Menu,
     MenuItem,
     InputLabel,
     Checkbox,
-    Avatar,
     ListItemText,
     List,
     ListItem,
-    ListItemAvatar,
     ListSubheader,
     ListItemSecondaryAction,
     Divider,
@@ -24,6 +23,7 @@ import {
     DialogActions,
     IconButton
 } from '@material-ui/core';
+
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -43,8 +43,13 @@ import CheckIcon from '@material-ui/icons/CheckCircleOutline';
 import FolderOpen from '@material-ui/icons/FolderOpen';
 import DnsIcon from '@material-ui/icons/Dns';
 import DeleteIcon from '@material-ui/icons/Delete';
+import StoppedIcon from '@material-ui/icons/Stop';
+import StartedIcon from '@material-ui/icons/PlayCircleOutline';
+import MoreIcon from '@material-ui/icons/More';
 import { confirmAlert } from '../Dialogs/AlertDialog';
 import { volumeDialog } from '../Dialogs/ContainerVolumeDialog';
+import SocketPubSub from '../../../services/sockerPubSub';
+import LoadingIndicator from "../LoadingIndicator/index";
 
 import YAML from 'yaml';
 
@@ -81,28 +86,196 @@ class ConfigsTable extends React.Component {
         this.state.selected = null;
         this.state.mode = null;
 
+        this.state.loading = false;
+        this.state.loadingMessage = null;
+
         this.state.inputDialogOpen = false;
         this.state.inputDialogLabel = "";
         this.state.inputDialogTarget = "";
         this.state.inputDialogValue = "";
         this.state.inputDialogKey = "";
         this.state.inputDialogValueErrors = null;
+        this.state.containerStatuses = null;
+
+        this.state.actionDialogOpen = false;
+        this.state.actionDialogAnchor = null;
 
         this.tblClickDebouncer = null;
+
+        this.tblButtonEventSource = null;
+
+        this.containerStatusUpdateInterval = null;
+    }
+
+    /**
+     * componentDidMount
+     */
+    componentDidMount() {
+        SocketPubSub.on("containerStatus", (data) => {
+            if (data.status == "done") {
+                this.setState({
+                    containerStatuses: data.containerStatus
+                });
+            } else {
+                this.setState({
+                    containerStatuses: null
+                });
+            }
+            if(this.state.loading == true)
+                this.setState({loading: false, loadingMessage: null});
+        });
+        SocketPubSub.socket.emit('getContainerStatus', {
+            "uid": this.props.userSession.userId
+        });
+        this.containerStatusUpdateInterval = setInterval(() => {
+            SocketPubSub.socket.emit('getContainerStatus', {
+                "uid": this.props.userSession.userId
+            });
+        }, 60000);
+    }
+
+    /**
+	 *componentWillUnmount
+	 */
+    componentWillUnmount() {
+        SocketPubSub.off("containerStatus");
+        clearInterval(this.containerStatusUpdateInterval);
+        this.containerStatusUpdateInterval = null;
     }
 
     // *****************************************************************
     SET_DATA_REDUCER_ACTION = "SET_CONTAINERS";
     tableRow(cellClasses, isSelected, selectedId, row) {
         let dImage = this.props.dockerImages.find(di => di.id == row.dockerImageId);
+
+        const handleClose = () => {
+            this.setState({ actionDialogOpen: false });
+            setTimeout(() => { this.tblButtonEventSource = null;}, 100);
+        };
+
+        const handleStop = (rowId) => {
+            this.setState({ actionDialogOpen: false });
+            (async() => {
+                this.setState({loading: true, loadingMessage: "Stopping service..."});
+                let dbResult = await API.endpoints.Containers.remote("stop", null, "POST", {
+                    "id": rowId,
+                    "uid": this.props.userSession.userId
+                });
+                if(dbResult.data.success){
+                    return this.props.notify("Container stopped", "info");
+                } else{
+                    return this.props.notify(dbResult.data.error, "error");
+                }
+            })();
+            setTimeout(() => { this.tblButtonEventSource = null;}, 100);
+        }
+
+        const handleStart = (rowId) => {
+            this.setState({ actionDialogOpen: false });
+            (async() => {
+                this.setState({loading: true, loadingMessage: "Starting service..."});
+                let dbResult = await API.endpoints.Containers.remote("start", null, "POST", {
+                    "id": rowId,
+                    "uid": this.props.userSession.userId
+                });
+                if(dbResult.data.success){
+                    return this.props.notify("Container started", "info");
+                } else{
+                    return this.props.notify(dbResult.data.error, "error");
+                }
+            })();
+            setTimeout(() => { this.tblButtonEventSource = null;}, 100);
+        }
+
+        const handleRestart = (rowId) => {
+            this.setState({ actionDialogOpen: false });
+            (async() => {
+                this.setState({loading: true, loadingMessage: "Restarting service..."});
+                let dbResult = await API.endpoints.Containers.remote("restart", null, "POST", {
+                    "id": rowId,
+                    "uid": this.props.userSession.userId
+                });
+                if(dbResult.data.success){
+                    return this.props.notify("Container restarted", "info");
+                } else{
+                    return this.props.notify(dbResult.data.error, "error");
+                }
+            })();
+            setTimeout(() => { this.tblButtonEventSource = null;}, 100);
+        }
+
+        const handleEnable = (enabledState, rowId) => {
+            this.setState({ actionDialogOpen: false });
+            (async() => {
+                let dbResult = await API.endpoints.Containers.remote("toggleEnabled", null, "POST", {
+                    enabled: !enabledState,
+                    id: rowId
+                });
+                if(dbResult.data.success){
+                    // Now dispatch updates
+                    this.props.dispatch({
+                        type: this.SET_DATA_REDUCER_ACTION,
+                        data: this.props.containers.map(c => {
+                            if(c.id == rowId){
+                                c.enabled = !enabledState
+                            }
+                            return c;
+                        })
+                    });
+                } else{
+                    return this.props.notify(dbResult.data.error, "error");
+                }
+            })();
+            setTimeout(() => { this.tblButtonEventSource = null;}, 100);
+        };
+
+        let containerStatus = this.state.containerStatuses ? this.state.containerStatuses.find(o => o.name == "psh_" + row.name) : null;
+        let isUp = containerStatus ? containerStatus.state == "UP" : false;
+
         return <TableRow hover key={row.id}
             className={isSelected ? "" : "hoverPointer"}
-            onClick={event => this.handleRowClick(event, row.id)}
+            onClick={event => {this.handleRowClick(event, row.id)}}
             selected={selectedId && selectedId === row.id}>
 
             <TableCell className={cellClasses}>{row.name}</TableCell>
             <TableCell className={cellClasses}>
                 {`${this.props.dockerImages.find(di => di.id == row.dockerImageId).name}${dImage.version.length > 0 ? ":" + dImage.version : ""}`}
+            </TableCell>
+            <TableCell className={cellClasses} style={{
+                width: 30
+            }}>
+                {row.enabled ? "Yes" : "No"}
+            </TableCell>
+            <TableCell className={cellClasses} style={{
+                width: 30
+            }}>
+                {/* { this.state.containerStatuses ? (isUp ? <StartedIcon style={{ fontSize: 14, color: "#e27373" }} /> : <StoppedIcon style={{ fontSize: 14 }} />) : ""} */}
+                { this.state.containerStatuses ? (isUp ? "Up" : "Down") : "n/a"}
+            </TableCell>
+            <TableCell className={cellClasses} style={{
+                textAlign: 'right'
+            }} component="th" scope="row">
+                <IconButton onClick={(event) => {
+                    this.tblButtonEventSource = "BTN";
+                    this.setState({
+                        actionDialogOpen: true,
+                        actionDialogAnchor: event.currentTarget
+                    });
+                }}>
+                    <MoreIcon />
+                </IconButton>
+                <Menu
+                    id="simple-menu"
+                    anchorEl={this.state.actionDialogAnchor}
+                    keepMounted
+                    open={this.state.actionDialogOpen}
+                    onClose={handleClose}
+                    >
+                    <MenuItem onClick={handleEnable.bind(this, row.enabled, row.id)}>{row.enabled ? "Disable container" : "Enable container"}</MenuItem>
+                    {this.state.containerStatuses && isUp && <MenuItem onClick={handleStop.bind(this, row.id)}>Stop</MenuItem>}
+                    {this.state.containerStatuses && isUp && <MenuItem onClick={handleRestart.bind(this, row.id)}>Restart</MenuItem>}
+                    {this.state.containerStatuses && !isUp && <MenuItem onClick={handleStart.bind(this, row.id)}>Start</MenuItem>}
+                </Menu>
             </TableCell>
         </TableRow>;
     }
@@ -140,6 +313,8 @@ class ConfigsTable extends React.Component {
         return this.props.containers.length > 0 ? <TableRow>
             <TableCell className={this.props.classes.tableHeaderCell}>Name</TableCell>
             <TableCell className={this.props.classes.tableHeaderCell}>Image</TableCell>
+            <TableCell className={this.props.classes.tableHeaderCell}>Enabled</TableCell>
+            <TableCell className={this.props.classes.tableHeaderCell}>State</TableCell>
         </TableRow> : null;
     }
     // *****************************************************************
@@ -331,6 +506,9 @@ class ConfigsTable extends React.Component {
      * handleRowClick
      */
     handleRowClick(event, id) {
+        if(this.tblButtonEventSource == "BTN") {
+            return;
+        }
         let selectedItem = this.props.containers.find(o => o.id === id);
         if (this.state.selected && this.state._id === selectedItem.id) {
             return;
@@ -1073,6 +1251,7 @@ class ConfigsTable extends React.Component {
                             }
                     }
                 })}
+                <LoadingIndicator show={this.state.loading} message={this.state.loadingMessage} />
             </Paper>
         );
     }
@@ -1082,6 +1261,7 @@ class ConfigsTable extends React.Component {
 // and insert/links it into the props of our component.
 // This function makes Redux know that this component needs to be passed a piece of the state
 const mapStateToProps = (state, props) => ({
+    userSession: state.userSession,
     containers: state.containers,
     networks: state.networks,
     dockerImages: state.dockerImages,

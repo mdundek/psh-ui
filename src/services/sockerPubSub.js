@@ -48,6 +48,15 @@ class SockerPubSub {
             });
         });
 
+        // When an update on the server occures
+        this.socket.on('containerStatus', (data) => {
+            this.subscriptions.forEach(o => {
+                if (o.eventName == 'containerStatus') {
+                    o.cb(data);
+                }
+            });
+        });
+
         // When the RTM server socket connections goes down
         this.socket.on('disconnect', () => {
             console.log("Disconnected");

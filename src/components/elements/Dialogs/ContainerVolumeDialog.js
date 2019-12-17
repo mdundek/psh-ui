@@ -218,7 +218,7 @@ export default class ReactContainerVolumeDialog extends React.Component {
                                                 }}
                                             />
                                         }
-                                        label="Pull and execute on every deploy"
+                                        label="Pull and execute command on every deploy"
                                     />
                                 </FormGroup>
                             </Grid>
