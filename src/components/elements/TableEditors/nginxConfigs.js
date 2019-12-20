@@ -42,6 +42,7 @@ import CheckIcon from '@material-ui/icons/CheckCircleOutline';
 import DeleteIcon from '@material-ui/icons/Delete';
 
 let SAFE_STRING_REGEX = /([^A-Za-z0-9_]+)/;
+let DOMAIN_AS_IP_REGEX = /\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/;
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -169,6 +170,9 @@ class NginxPresetsTable extends React.Component {
                 }
                 if (this.state._asSubdomain && (!this.state._domainId || this.state._domainId.length == 0)) {
                     return this.props.notify("Error: You need to specify a domain since you configured a subdomain.", "error");
+                }
+                if (this.state._asSubdomain && DOMAIN_AS_IP_REGEX.exec(this.props.domains.find(o => o.id == this.state._domainId).value)) {
+                    return this.props.notify("Error: subdomains are only allowed with real domain names.", "error");
                 }
 
                 let modelObject = this.populateSelected(this.state);

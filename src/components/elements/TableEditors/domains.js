@@ -30,6 +30,8 @@ import CardContent from '@material-ui/core/CardContent';
 
 import { certificateUploadDialog } from '../Dialogs/CertificateUploadDialog';
 
+let DOMAIN_AS_IP_REGEX = /\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/;
+
 function Transition(props) {
     return <Slide direction="up" {...props} />;
 }
@@ -215,7 +217,7 @@ class DomainsTable extends React.Component {
     getDialogFormBlockUploadCertificates() {
         return this.state._httpsEnabled ? <Grid item xs={12} style={{ textAlign: 'right' }}>
             <Typography gutterBottom variant="caption">
-                If you have a certificate, upload it now
+                If you already have a certificate, upload it now
             </Typography>
             <Button color="primary" variant="outlined" onClick={(e) => {
                 certificateUploadDialog({
@@ -259,6 +261,9 @@ class DomainsTable extends React.Component {
             if (isValide) {
                 if (this.props.domains.find(o => (!this.state._id || o.id != this.state._id) && o.value.toLowerCase() == this.state._value.toLowerCase())) {
                     return this.props.notify("Conflict: domain name already in use.", "error");
+                }
+                if (DOMAIN_AS_IP_REGEX.exec(this.state._value) && this.props.nginxConfigs.find(o => o.domainId && o.domainId == this.state._id)) {
+                    return this.props.notify("Conflict: At least one nginx config uses subdomains associated with this domain.", "error");
                 }
 
                 let modelObject = this.populateSelected(this.state);
@@ -379,7 +384,7 @@ class DomainsTable extends React.Component {
      */
     render() {
         const { classes } = this.props;
-
+console.log(this.props.settings);
         let tblHeader = this.tableHeader();
         return (
             <Paper className={classes.paper}>
@@ -454,20 +459,74 @@ class DomainsTable extends React.Component {
                     <DialogContent>
                         {this.state.sslMissing && <div>
                             <br />
-                            <Typography gutterBottom variant="h5" component="h2">
-                                Missing certificate for this domain!
+                            <Typography gutterBottom variant="h6">
+                                No certificate found for this domain!
                             </Typography>
+                            <Typography variant="subtitle2" gutterBottom>
+                                Instructions to generate the missing certificates:
+                            </Typography>
+                            
                             <Card className={classes.card}>
                                 <CardContent>
 
-                                    <Typography component="p">
-                                        <b>If I don't have a certificate for this domain:</b><br /><br />
-                                        The following instructions are specific for CloudFlare, this seems to be the best user experience when it comes to wildcard certificates with Letsencrypt.
-                                        Also, CloudFlare being free for 1 domain that you own is a good reason to use them as your domain DNS provider.
-                                        Couples with the flexibility of subdomains, this is enougth for most use cases.<br /><br />
-                                        Here are the instructions for you to follow in order to set up a Letsencrypt SSL certificate using certbot for your domain:
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        Get the certbot docker image for your domain registrar:
                                     </Typography>
-                                    <div className="MuiTypography-body1-212">
+                                    <br/>
+                                    <Typography component="p" style={{color: "#3d499c"}}>
+                                        docker pull certbot/certbot<br/>
+                                        <br/><span style={{color: "#555555"}}>or</span><br/><br/>
+                                        docker pull certbot/dns-dnsmadeeasy<br/>
+                                        docker pull certbot/dns-dnsimple<br/>
+                                        docker pull certbot/dns-ovh<br/>
+                                        docker pull certbot/dns-cloudflare<br/>
+                                        docker pull certbot/dns-cloudxns<br/>
+                                        docker pull certbot/dns-digitalocean<br/>
+                                        docker pull certbot/dns-google<br/>
+                                        docker pull certbot/dns-luadns<br/>
+                                        docker pull certbot/dns-nsone<br/>
+                                        docker pull certbot/dns-rfc2136<br/>
+                                        docker pull certbot/dns-route53<br/>
+                                        docker pull certbot/dns-gehirn<br/>
+                                        docker pull certbot/dns-linode<br/>
+                                        docker pull certbot/dns-sakuracloud
+                                    </Typography>
+                                    <br/>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        Generate your SSL certificate:
+                                    </Typography>
+                                    <br/>
+                                    <Typography component="p">
+                                        The following command will create your certificate using the certbot docker image. This command assumes that you are creating the certificate manually without the use of a plugin (using the docker image "certbot/certbot"). If you are using a specific dns plugin, modify the bold section accordingly. 
+                                    </Typography>
+                                    <br/>
+                                    <Typography component="p" style={{color: "#3d499c"}}>
+                                        docker run -it --rm --name certbot -v "/usr/local/private-server-hub/.letsencrypt:/etc/letsencrypt" <span style={{fontWeight: "bold"}}>certbot/certbot</span> \<br/>
+                                        <span style={{fontWeight: "bold"}}>certonly --manual --preferred-challenges dns-01 --agree-tos -d "{this.state._value}" -d "*.{this.state._value}" --server https://acme-v02.api.letsencrypt.org/directory</span>
+                                    </Typography>
+                                    <br/>
+                                    <Typography component="p">
+                                        Follow the instructions provided when executed the above command. 
+                                    </Typography>
+                                    <br/>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        Set up auto-renew of your certificate:
+                                    </Typography>
+                                    <br/>
+                                    <Typography component="p">
+                                        Open your crontab:
+                                    </Typography>
+                                    <Typography component="p" style={{color: "#3d499c"}}>
+                                        crontab -e
+                                    </Typography>
+                                    <br/>
+                                    <Typography component="p">
+                                        Add the following line to it:
+                                    </Typography>
+                                    <Typography component="p" style={{color: "#3d499c"}}>
+                                        0 5 * * * docker run -it --rm --name certbot -v "/usr/local/private-server-hub/.letsencrypt:/etc/letsencrypt" <span style={{fontWeight: "bold"}}>certbot/certbot</span> renew --quiet && docker container exec psh_nginx nginx -s reload > /dev/null 2>&1<br/> 
+                                    </Typography>
+                                    {/* <div className="MuiTypography-body1-212">
                                         <br /><br />
                                         <b>CloudFlare</b>
                                         <ol>
@@ -489,8 +548,8 @@ class DomainsTable extends React.Component {
                                             <li>Set the SSL mode to <b>Full</b> under the <i>Crypto</i> section for the domain</li>
                                             <li><i>Disable Universal SSL</i> option under the <i>Crypto</i> section for the domain</li>
                                         </ol>
-                                    </div>
-                                    <div className="MuiTypography-body1-212">
+                                    </div> */}
+                                    {/* <div className="MuiTypography-body1-212">
                                         <b>SSL setup</b>
                                         <ol>
                                             <li>SSH into your server</li>
@@ -507,13 +566,13 @@ class DomainsTable extends React.Component {
                                             </li>
                                             <li>Once done try to save your domain again with the SSL flag enabled</li>
                                         </ol>
-                                    </div>
+                                    </div> */}
                                 </CardContent>
                             </Card>
                         </div>}
-                        {!this.state.sslMissing && <Typography gutterBottom variant="body1" component="h2">
+                        {this.state._httpsEnabled && !this.state.sslMissing && <Typography gutterBottom variant="body1" component="h2">
                             Certificate configured!
-                            </Typography>}
+                        </Typography>}
                     </DialogContent>
                 </Dialog>
             </Paper>
