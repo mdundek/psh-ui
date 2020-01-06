@@ -299,7 +299,7 @@ class ConfigsTable extends React.Component {
             </TableCell>
 
             <TableCell className={cellClasses} style={{
-                width: 100
+                width: 120
             }}>
                 { containerStatus ? (isUp ? "Up" : "Down") : "n/a"}
                 {containerStatus && isUp && 
