@@ -384,7 +384,7 @@ class DomainsTable extends React.Component {
      */
     render() {
         const { classes } = this.props;
-console.log(this.props.settings);
+
         let tblHeader = this.tableHeader();
         return (
             <Paper className={classes.paper}>
@@ -394,7 +394,7 @@ console.log(this.props.settings);
                 <Card className={classes.cardInfo}>
                     <CardContent>
                         <Typography>
-                            The default domain let's NGinx know what domain name to use for the psh-admin application access (instead of localhost).
+                            The default domain is used to expose the "private server hub" admin console through the NGinx reverse proxy, therefore making it accessible from outside your home.
                         </Typography>
                     </CardContent>
                 </Card>

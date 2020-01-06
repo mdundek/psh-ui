@@ -125,7 +125,7 @@ export default class CertificateUploadDialog extends React.Component {
                     </DialogContentText>
                     <div style={{ backgroundColor: "#eeeeee", padding: 10, marginTop: 20, marginBottom: 20 }}>
                         cat domain.crt domain_intermediate.ca-bundle >> ssl_bundle.crt
-                        </div>
+                    </div>
                     <ValidatorForm ref={form => (this.formEl = form)}>
                         <Grid container alignItems="center" style={{ marginTop: 20 }}>
                             <Grid item xs={3} style={{ textAlign: 'right' }}>

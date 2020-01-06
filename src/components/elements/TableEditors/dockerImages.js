@@ -105,6 +105,14 @@ class DockerImagesTable extends React.Component {
                     </div>
                 </Grid>
                 <Grid item xs={12} style={{ textAlign: 'left' }}>
+                    <Paper style={{padding: 10, backgroundColor: "#dddddd", marginTop: 20}}>
+                        <Typography component="p">
+                            Use the template YAML section to set default docker-compose configuration parameters for containers based on this image. <br/>
+                            Any configuration element specified on the container itself will overwrite the configuration element specified in this template. 
+                        </Typography>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} style={{ textAlign: 'left' }}>
                     <div className={"form-group"}>
                         <TextField
                             multiline
