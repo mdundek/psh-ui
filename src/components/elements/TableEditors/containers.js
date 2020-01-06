@@ -387,7 +387,7 @@ class ConfigsTable extends React.Component {
         return this.props.containers.length > 0 ? <TableRow>
             <TableCell className={this.props.classes.tableHeaderCell}>Name</TableCell>
             <TableCell className={this.props.classes.tableHeaderCell}>Image</TableCell>
-            <TableCell className={this.props.classes.tableHeaderCell}>Enabled</TableCell>
+            <TableCell className={this.props.classes.tableHeaderCell}>Schedule deploy</TableCell>
             <TableCell className={this.props.classes.tableHeaderCell}>State</TableCell>
         </TableRow> : null;
     }
