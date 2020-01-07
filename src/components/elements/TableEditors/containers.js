@@ -48,9 +48,8 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import EnabledIcon from '@material-ui/icons/CheckBoxOutlined';
 import DisabledIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 
-import StartedIcon from '@material-ui/icons/PlayCircleOutline';
-import StoppedIcon from '@material-ui/icons/Stop';
-
+import StoppedIcon from '@material-ui/icons/PlayCircleOutline';
+import StartedIcon from '@material-ui/icons/Stop';
 
 import ReplayIcon from '@material-ui/icons/Replay';
 import MoreIcon from '@material-ui/icons/More';
@@ -299,9 +298,9 @@ class ConfigsTable extends React.Component {
             </TableCell>
 
             <TableCell className={cellClasses} style={{
-                width: 120
+                width: 140
             }}>
-                { containerStatus ? (isUp ? "Up" : "Down") : "n/a"}
+                { containerStatus ? (isUp ? "Started" : "stopped") : "n/a"}
                 {containerStatus && isUp && 
                     <Tooltip title="Click to stop container" aria-label="add">
                         <IconButton onClick={function (_row, event) {
